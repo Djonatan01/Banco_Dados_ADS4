@@ -81,8 +81,47 @@ where Nome_VEND like 'j%'
 and faixa_comissao not in ('c')
 
 /*1.5*/
-select * , Salario [sal], Salario = ((Salario / 100) * 15)+Salario 
-from Vendedor     
+SELECT Nome_VEND , ((Salario * 1.15) + 120) AS novo_salario_fixo
+FROM Vendedor v 
+WHERE faixa_comissao = 'C'
+ORDER BY Nome_VEND;
+
+/*1.6*/
+SELECT MAX(Salario) as Maior_Salario , MIN(Salario) as Menor_salario 
+FROM  Vendedor v; 
+
+/*1.6.2*/
+SELECT DISTINCT(Unidade) FROM Produto p 
+
+/*1.6.3*/
+SELECT * FROM  Itens_ pedido ip
+
+SELECT  ip.Num_PED  as Numero_pedido, COUNT(ip.Cod_PROD) as Total_pedidos
+FROM Itens_pedido ip 
+WHERE ip.Num_PED 
+GROUP BY ip.Num_PED 
+
+
+/*1.6.3*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
