@@ -41,7 +41,7 @@ CREATE TABLE CLIFOR(
 	idCliFor INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
 	nomeCliFor VARCHAR(100),
 	endCliFor VARCHAR(150),
-	contCliFor VARCHAR(100),
+	contatoCliFor VARCHAR(100),
 	CPF_CNPJCliFor VARCHAR(15),	
 	tipoCliFor VARCHAR(1)
 );
@@ -275,11 +275,11 @@ BEGIN
 END;
 
 CREATE PROCEDURE cadastroCliFor(IN _nomeCliFor VARCHAR(100),IN _endCliFor VARCHAR(150),IN _CPF_CNPJCliFor VARCHAR(15),
-IN _contCliFor VARCHAR(20),IN _numeroAgencia INTEGER, IN _idBanco INTEGER)
+IN _contatoCliFor VARCHAR(20),IN _numeroContaCliFor INTEGER, IN _numeroAgencia INTEGER, IN _idBanco INTEGER, IN _tipoCliFor VARCHAR(1))
 BEGIN	
 	DECLARE agExistente INTEGER;
 	DECLARE bankExistente INTEGER;
-	DECLARE  cliForExistente INTEGER;
+	DECLARE cliForExistente INTEGER;
 	DECLARE _idAgencia INTEGER;
 	DECLARE _idCliFor INTEGER;
 	
@@ -295,21 +295,43 @@ BEGIN
    	FROM CLIFOR c
 	WHERE c.CPF_CNPJCliFor = _CPF_CNPJCliFor;
 	
-   	IF (bankExistente = 0) THEN
-   		SELECT "BANCO NÃO CADASTRADO" AS MSG;
-   	ELSE 
-   		IF (agExistente = 0) THEN
-    		INSERT INTO AGENCIA (numeroAgencia, idBanco) VALUES(_numeroAgencia, _idBanco);     	
-    	END IF;
-    	SET _idAgencia = (SELECT a.idAgencia FROM AGENCIA a WHERE numeroAgencia = _numeroAgencia);
-    	IF (cliForExistente = 0) THEN
-    		INSERT INTO CLIFOR (nomeCliFor,endCliFor,contCliFor,CPF_CNPJCliFor,tipoCliFor) VALUES(_nomeCliFor,_endCliFor,_contCliFor,_CPF_CNPJCliFor,'F');
-   			SET _idCliFor = (SELECT c.idClifor FROM CLIFOR c ORDER BY c.idClifor DESC LIMIT 1);
-   			INSERT INTO CONTASFORN(idAgencia,nContaForn,idCliFor)VALUES(_idAgencia,_contCliFor,_idCliFor);
+	IF (_tipoCliFor = 'C') THEN
+		IF (cliForExistente = 0) THEN
+    		INSERT INTO CLIFOR (nomeCliFor,endCliFor,contatoCliFor,CPF_CNPJCliFor,tipoCliFor) VALUES(_nomeCliFor,_endCliFor,_contatoCliFor,_CPF_CNPJCliFor,_tipoCliFor);
+   			SELECT "CLIENTE CADASTRADO COM SUCESSO" AS MSG;
    		ELSE
-   			UPDATE CLIFOR SET tipoCliFor = 'A' WHERE CPF_CNPJCliFor = _CPF_CNPJCliFor;
-   			SET _idCliFor = (SELECT c.idClifor FROM CLIFOR c WHERE CPF_CNPJCliFor = _CPF_CNPJCliFor);
-   			INSERT INTO CONTASFORN(idAgencia,nContaForn,idCliFor)VALUES(_idAgencia,_contCliFor,_idCliFor);
+   			SET _tipoClifor = (SELECT c.tipoClifor FROM CLIFOR c WHERE CPF_CNPJCliFor = _CPF_CNPJCliFor);
+   			IF (_tipoClifor = 'C' OR _tipoClifor = 'A' ) THEN
+   				SELECT "CLIENTE JÁ CADASTRADO" AS MSG;
+   			ELSEIF(_tipoClifor = 'F') THEN
+   				UPDATE CLIFOR SET tipoCliFor = 'A' WHERE CPF_CNPJCliFor = _CPF_CNPJCliFor;
+   				SELECT "CLIENTE ATUALIZADO COM SUCESSO" AS MSG;
+   			END IF;
+   		END IF;
+   	ELSE 
+   		IF (bankExistente = 0) THEN
+   			SELECT "BANCO NÃO CADASTRADO" AS MSG;
+   		ELSE 
+   			IF (agExistente = 0) THEN
+    			INSERT INTO AGENCIA (numeroAgencia, idBanco) VALUES(_numeroAgencia, _idBanco);     	
+    		END IF;
+    		SET _idAgencia = (SELECT a.idAgencia FROM AGENCIA a WHERE numeroAgencia = _numeroAgencia);
+    		IF (cliForExistente = 0) THEN
+    			INSERT INTO CLIFOR (nomeCliFor,endCliFor,contatoCliFor,CPF_CNPJCliFor,tipoCliFor) VALUES(_nomeCliFor,_endCliFor,_contatoCliFor,_CPF_CNPJCliFor,_tipoCliFor);
+   				SET _idCliFor = (SELECT c.idClifor FROM CLIFOR c ORDER BY c.idClifor DESC LIMIT 1);
+   				INSERT INTO CONTASFORN(idAgencia,nContaForn,idCliFor)VALUES(_idAgencia,_numeroContaCliFor,_idCliFor);
+   				SELECT "FORNECEDOR CADASTRADO COM SUCESSO1" AS MSG;
+   			ELSE
+   				SET _tipoClifor = (SELECT c.tipoClifor FROM CLIFOR c WHERE CPF_CNPJCliFor = _CPF_CNPJCliFor);
+   				IF  (_tipoCliFor != 'A') THEN
+   					UPDATE CLIFOR SET tipoCliFor = 'A' WHERE CPF_CNPJCliFor = _CPF_CNPJCliFor;   			
+   					SET _idCliFor = (SELECT c.idClifor FROM CLIFOR c WHERE CPF_CNPJCliFor = _CPF_CNPJCliFor);
+   					INSERT INTO CONTASFORN(idAgencia,nContaForn,idCliFor)VALUES(_idAgencia,_numeroContaCliFor,_idCliFor);
+   					SELECT "FORNECEDOR CADASTRADO COM SUCESSO2" AS MSG;
+   				ELSE
+   					SELECT "FORNECEDOR JÁ CADASTRADO" AS MSG;
+   				END IF;
+   			END IF;
    		END IF;
    	END IF;
 END;
@@ -321,6 +343,7 @@ _nomeMatriz varchar(100),_endMatriz varchar(100),_contMatriz varchar(100),_CNPJM
 BEGIN
 	DECLARE matrizExistente INTEGER;
 	DECLARE	filialExistente INTEGER;
+	DECLARE _idMatriz INTEGER; 
 	
 	SELECT COUNT(*) INTO matrizExistente
 	FROM MATRIZ m 
@@ -336,12 +359,17 @@ BEGIN
 		VALUES (_nomeMatriz, _endMatriz, _contMatriz, _CNPJMatriz);
 		SELECT "MATRIZ CADASTRADA COM SUCESSO" AS MSG;
 	END IF;
+
+	SET _idMatriz = (SELECT  m.idMatriz FROM MATRIZ m WHERE CNPJMatriz = _CNPJMatriz);
+
 	IF (_nomeFilial != "") THEN
 		IF (filialExistente = 0) THEN
 			-- Inserir dados na tabela FILIAL
 			INSERT INTO FILIAL (nomeFilial, endFilial, contFilial, CNPJFilial, idMatriz)
-			VALUES (_nomeFilial, _endFilial,_contFilial, _CNPJFilial, _CNPJMatriz);
+			VALUES (_nomeFilial, _endFilial,_contFilial, _CNPJFilial, _idMatriz);
 			SELECT "FILIAL CADASTRADA COM SUCESSO" AS MSG;
+		ELSE 
+			SELECT "FILIAL JÁ CADASTRADA" AS MSG;
 		END IF;
 	END IF;
 END;
@@ -351,6 +379,18 @@ CALL CadastroMatrizFilial ('Filial D','Rua 10','(12)3144-0000','34426386000110',
 
 CALL cadastroLancamento('2023-04-01', '2023-04-01', 2, 2, 2, 1, 'NC', 'Receber', 'Lançamento teste1');
 
-CALL cadastroCliFor('TESTE2', 'RUA TESTE2', '04293483000110', '656576576', '7898', '256');
+CALL cadastroCliFor('TESTE5', 'RUA TESTE5', '04293483000115', '12988070599',NULL, NULL, NULL, 'C');
 
+CALL cadastroCliFor('TESTE5', 'RUA TESTE5', '04293483000115', '12988070599', '6437267','7898', '256', 'F');
 
+CALL cadastroCliFor('TESTE6', 'RUA TESTE6', '04293483000116', '12988070596', '6437266','7896', '256', 'F');
+
+CALL cadastroCliFor('TESTE6', 'RUA TESTE6', '04293483000116', '12988070596', NULL, NULL, NULL, 'C');
+
+SELECT * FROM CLIFOR 
+
+SELECT * FROM CONTASFORN
+
+SELECT * FROM LANCAMENTOS
+
+SELECT * FROM EXTRATO
